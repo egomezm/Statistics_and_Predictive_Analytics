@@ -1,0 +1,169 @@
+---
+title: "Class 1"
+author: "B. Kadiyala"
+date: "2/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+
+## Statistics and Predictive Analytics
+
+
+
+Download and install R and Rstudio if you have not already done so.
+
+    # https://www.rstudio.com
+    # https://www.r-project.org
+
+Rstudio environment:  starting in the upper right, clockwise:
+    # Environment pane:  shows which object are in memory.
+    # Plot pane:  displays plots created with code.
+    # Console: allows you to run code by pressing return; code is not saved.
+    # Source pane:  contains documents you are working on (like this script).
+
+### Install dplyr and ggplot2 packages:  
+Tools -> Install Packages
+
+### Cheatsheets
+Help -> Cheatsheets
+
+### R document types: scripts, notebooks, RMarkdown, etc.
+    
+* Scripts are just text files.  Email them to collaborators. 
+* The hashtag indicates a comment that R should ignore.  
+* Run individual lines in the script by pressing control-return.
+* You can also select a portion of a script to run it.
+
+### Projects!  (for file management).  Create IS-6489 project.
+    # File -> New Project
+
+
+
+
+### Objects in R
+
+
+The basis of R programming consists in assigning values to objects and  manipulating those objects. Most simply, R is just a calculator
+
+```{r}
+2 + 3
+```
+
+That calculation runs in the console. But we can save the value in an object which is stored in memory. To do so we use the assignment operator, <-.  
+
+```{r}
+x <- 2 + 3
+x
+
+x + x
+```
+
+There is always more than one way to do things in R! We can use a built in function also.
+```{r}
+sum(x, x)
+
+x * x
+
+prod(x, x)
+
+x^2 
+
+y <- x + x
+```
+
+Question:  What is the value of y?
+
+
+
+
+### Getting data into R
+
+#### 1. Built in data
+
+```{r}
+data(mtcars)
+```
+
+`mtcars` is a multidimensional data structure known as a dataframe. A dataframe is similar to a spreadsheet, with rows and columns, where each column has the same number of rows
+
+#### 2. Import with code
+
+Load csv into your local folder (supply the path to the file if the file  is not in your working directory)
+
+```{r}
+d <- read.csv("day.csv")
+```
+
+Here we have read in day.csv with the read.csv() command, and have stored it as an object, d, which is a dataframe.
+
+How do you know what your working directory is?
+
+```{r}
+getwd()
+```
+
+#### 3. Import with Rstudio.
+
+Use Rstudio's "import dataset" button to browse for data on your computer. This is a tab in the environment pane, upper right.
+
+#### 4. Retrieve from the web.
+
+```{r}
+a <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data",
+              header = F)
+```
+
+
+### Day.csv
+
+The day.csv comes from https://archive.ics.uci.edu/ml/datasets/bike+sharing+dataset#. 
+
+Bike-sharing rental process is highly correlated to the environmental and seasonal settings. For instance, weather conditions,
+precipitation, day of week, season, hour of the day, etc. can affect the rental behaviors. The core data set is related to  
+the two-year historical log corresponding to years 2011 and 2012 from Capital Bikeshare system, Washington D.C., USA which is 
+publicly available in http://capitalbikeshare.com/system-data. We aggregated the data on two hourly and daily basis and then 
+extracted and added the corresponding weather and seasonal information. Weather information are extracted from http://www.freemeteo.com. 
+
+
+
+```{r}
+d <- read_csv("day.csv")
+
+glimpse(d)
+```
+```{r} 
+d %>% 
+  group_by(season) %>% 
+  summarize(mean = mean(cnt),
+            median = median(cnt),
+            perc_60 = quantile(cnt, probs = c(.6))) 
+quantile(d$cnt)
+```
+```{r}
+quantile(d$cnt, probs = c(.5, .6, .7))
+```
+```{r}
+ggplot(d, aes(cnt))+
+  geom_histogram()
+```
+
+```{r}
+ggplot(d, aes(x = factor(season), y = cnt))+
+  geom_boxplot()
+```
+
+```{r}
+ggplot(d, aes(cnt))+
+  geom_histogram()+
+  facet_wrap(~season)
+
+view(d)
+```
+
+
