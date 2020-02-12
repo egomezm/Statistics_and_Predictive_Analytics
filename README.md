@@ -1,0 +1,2 @@
+# Statistics_and_Predictive_Analytics
+Statistics_and_Predictive_Analytics Course from the University of Utah
