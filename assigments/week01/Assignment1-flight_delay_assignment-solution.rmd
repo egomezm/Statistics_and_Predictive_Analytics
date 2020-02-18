@@ -1,0 +1,155 @@
+---
+title: "Flight Delay Analysis"
+author: "Eduardo Gomez"
+date: "02-14-2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages and data
+
+```{r}
+# Load packages
+library(tidyverse) 
+```
+```{r}
+# Load data
+d <- read_csv("flight_delay_clean.csv")
+```
+```{r}
+# Inspect data:
+# Glimpse
+glimpse(d)
+# Summary
+summary(d)
+```
+
+## Questions
+
+Lightly comment your code and use pipes for readability.
+
+Comment briefly on each of the questions, as directed.  Only the the final question requires a lengthier response.
+
+### Q1
+Compute the mean, median, 90th percentile, and standard deviation of arrival delay minutes for RegionEx flights. Do the same for MDA flights. Which measure of central tendency would be most appropriate for comparing airline performance?
+
+```{r}
+d %>% #Use the entire dataset
+  group_by(airline) %>% # then Group by Airline
+  summarize( # Sumarize by showing:mean, median, perc_90 in terms of Delays
+    mean = mean(delay),
+    median = median(delay),
+    perc_90 = quantile(delay, probs = c(.9)),
+    standard_deviation = sd(d$delay, na.rm = TRUE)
+  )
+# Show the default quartiles information (0%, 25%, 50%, 75%, 100%)
+  quantile(d$delay)
+```
+>
+Response:  
+The mean for RegionEx is 15.66 min is greater than MDA 10.90 min wich indicates a hiher delay for RegionEx. However, looking closer using the median, we can see that RegionEx has a 9 min delayed, and MDA has a 13 minutes delay. This reverted phenomenom is caused by outliers skewing the data to the right. Also the relatively high standard deviation confirm the skewed data from the outliers on RegionEx. In this case the Median is a better measure of central tendency for our analysis, becasue the Median is not affected by outliers.
+
+
+
+### Q2
+
+Inspect the distribution of RegionEx's arrival delays by constructing a histogram of the number of arrival delay minutes of RegionEx's flights. Do the same for MDA's flights. How do these two distributions compare? Hint:  use facet_wrap().
+```{r}
+ggplot(d, aes(x=delay)) +
+  geom_histogram()+
+  ggtitle("RegionEx's arrival") + 
+  xlab("Off schedule Minutes (Early or Delayed)") +
+  ylab("Frequency (Count)") +
+  facet_wrap(~d$airline) 
+  
+```
+```{r}
+ggplot(d, aes(x=d$airline,y = d$delay)) + 
+  geom_boxplot()
+```
+
+>
+#### Response: 
+By charting the data into a histogram we can observe the pressence of outliers inRegionEX is skewing the data to the right becasue of the outliers. and aditional plotting of the data using a BoxPlot shows a smaller ammount of observations for MDA in comparison to RegionEx, we can also see the central tendency measuer is lower than MDA.
+
+
+### Q3
+
+So far we have considered airline performance in terms of average delay in minutes.  However, the performance metrics, as noted in the case description, also include the percentage of delayed flights.  Let's verify that MDA's COO is correct: does RegionEx have a higher percentage of delayed flights?
+
+Here is code to answer that question:
+
+```{r}
+# Create a summary table of percent delayed by airline.
+d %>% 
+  group_by(airline) %>% 
+  summarize(n = n(),
+            percent_delay = (mean(delay_indicator) * 100) %>% round(1)) 
+
+```
+
+Note that because `delay_indicator` is numeric (a binary 0/1 variable) calculating the mean of the vector returns the proportion of 1s, which, multiplied by 100, is equivalent to the *percentage* of delayed flights.
+
+Write your own code to create a table summarizing the percentage of delayed flights by airline *and route.*  
+
+```{r}
+#Enrire dataset percentage (ontime/late)
+table(d$delay_indicator) %>% 
+  prop.table
+
+# Sumary of percent delay by airline and route
+d %>% 
+  group_by(airline, route_code) %>% 
+  summarize(
+    n = n(),
+    percent_delay = (mean(delay_indicator) * 100) %>% round(1)
+  ) 
+
+```
+
+These tables contain conflicting information. How should you answer the question of whether RegionEx has a higher percentage of delayed flights?  Is the the COO correct?  And, if not, why not?
+
+>
+#### Response:
+While reviewing the summary by Airline, the data shows that RegionEx has a 26.2 minutes percentage delay. By the other hand MDA has a 25.8 percentage delay. It would be very easy to presume that RegionEx has a greater percentage of delay.  However once we breakit down even further by including the routes as well as the airline, we can see that RegionEx has a lower percent_delay when comparing aples to aples. In other words one fligh route agaisnt another flight rout from each airline. RegionEx has triple the flights observations point of data and when we compare same route for each airlines we see that routes of RegionEx of DFW/MSY and MSY/DFW have lower percentage delay per route than the routes of MDA of DFW/MSY and MSY/DFW.
+
+
+### Q4
+
+Compare the scheduled flight durations for the two airlines on each of their four routes. Compare the actual flight durations. What do you notice? If the two airlines had the same scheduled duration, what impact would this have on their delay records?
+
+```{r}
+# Sumary of percent delay by airline and route
+d %>% 
+  group_by(airline, route_code) %>% 
+  summarize(
+    n = n(),
+    #percent_delay = (mean(delay_indicator) * 100) %>% round(1)
+    schedule_time = (mean(scheduled_flight_length)) %>% round(1),
+    actual_time = (mean(actual_flight_length)) %>% round(1),
+    diference = actual_time - schedule_time
+
+    
+  ) 
+```
+
+>
+#### Response:
+We can observe from the information generated that RegionEx has a greater variation from scheduled to Actual time. Asuming that we replace RegionEx schedules to match those schedules of MDA and keep the actual filght time from RegionEx, the diference would be reduce mostly within the -+15 minute windows  minute to be considered on time, with only very few exceptions. and dramatically decressed the airline delay.
+
+### Q5
+
+Does the data support the claim that the on‐time performance of RegionEx is worse than that of MDA? Write a paragraph in which you argue a position. In your answer, please incorporate the quantitative evidence you have developed above.
+
+> 
+#### Response:
+RegionEx on time performance is really NOT worst than MDA, by the contrary in many instances they outperform MDA on time performance.    <br><br>
+For a reason unknow from the data provided, RegionEx scheduled their flights 5-10 minutes shorter than MDA as seen in the "Sumary of percent delay by airline and route" table, where we can see the schedules of RegionEx routes DFW/MSY and MSY/DFW had a schedule flight of 90 minutes compared to MDA route DFW/MSY and MSY/DFW is 100 minutes for both routes.<br>
+We also see that RegionEx routes MSY/PNS and PNS/MSY have a schedule flight time of 70 minutes compared to MDA route MSY/PNS and PNS/MSY of 75  minutes.<br>
+This is why the numbers apeared to be higher for RegionEx in question 1 and in the report of the COO. it shows a mean of 10.9 minutes delay for MDA and a mean of 15.6 delay minutes for RegionEx. So, when we only observed the data grouped by airline only as in answered to question 1 "Compare the delay percent groupped by airline", but once we break down the data to the same level of observations and use appropiate level of comparables, we can observed that RegionEx has more almost triple the number of flights (90 flights for RegionEx and 30 for MDA), and the bigger the sample the more accurate.<br>
+In Addition to that we see that routes of RegionEx for routes of DFW/MSY (25.6 minutes) and MSY/DFW (28.9 minutes) have lower percentage delay per route than the routes of MDA of DFW/MSY (26.7 minutes) and MSY/DFW (30.0 minutes) as explained in answer for question3.   <br><br>
+Last but not least, as explained in the answered to question 4, the scheduled flights are lower in RegionEx than in MDA. That lowers the bar for RegionEx for when they get measured and therefore is more frequent for them to exceed the 15 minute window of on time performance. But to the eyes of the customers is simply not percived as worst delays than MDA, by the contrary actual flight times in minutes are lower on RegionEx.    <br><br>
+What we can learn from this analysis that we need to carefull comparing data, to the lowest equivalent comparable. In this case compare "actual flight times"  and "schedule flight time" from each airline and route to make a fair comparison.
