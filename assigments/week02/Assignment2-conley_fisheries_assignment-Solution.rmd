@@ -1,0 +1,194 @@
+---
+title: "Conley Fisheries - Random Variables and Sampling"
+author: "Eduardo Gomez"
+date: "02-18-2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages and create empty data frame
+
+```{r}
+# Load packages
+library(tidyverse) 
+
+# Define n
+n <- 1000
+
+# Empty data frame for 1000 simulated days
+data <- data.frame(
+                day = seq(1:n), # A sequense of Days
+                demand = NA, # demand in Rockport
+                quantity = NA, # quanity sold
+                price = NA, # price per pound
+                cost = 10000, # cost of daily operations
+                earnings = NA # The earnings for eah day
+              )
+
+head(data)
+```
+
+Your goal in this project is to:
+
+1. Fill in the dataset with random numbers drawn from the probability distributions defined in the case description---distributions for demand, quantity and price.
+
+2. Use those numbers to compute earnings.
+
+3. Summarize the earnings distribution to inform a business recommendation.
+
+Note:  
+
+1. This case is slightly different from the one in the tutorial in that quantity sold is a function of demand: if demand is greater than 3500 then quantity is 3500 otherwise it equals demand.  The mathematical notation used for this relationship in the case description---min(3500, D)---is NOT R code. There are various ways of creating the quantity variable but `ifelse()` works well.
+
+2. Use set.seed(123) once before doing any simulation.  Why 123?  This is an arbitrary seed that controls a random process, making the results comparable.  People who share the seed will get the same results. R will increment the seed in a deterministic fashion every time you run a random process.  So if you simulate your random variables in a different order than the one stipulated in the empty dataframe that has been provided, you will get a different answer.  Is it wrong?  No, but your results will not be identical to those of your classmates.  For example:
+
+```{r}
+# Set seed to 123 to have consisten results with the rest of my class and TA
+set.seed(123)
+rnorm(1000) %>% mean() #Calculate mean from random generation on a Normal distribution
+rnorm(1000) %>% mean() #Calculate mean from random generation on a Normal distribution
+
+```
+
+The means of the two samples are different (.016 vs. .042) because R has incremented the seed for the second sample. 
+
+Compare to:
+
+
+```{r}
+# Set seed to 123 to have consisten results with the rest of my class and TA
+set.seed(123)
+rnorm(1000) %>% mean()
+
+# Set seed again so it will not be incremented and stay consisten results with the rest of my class and TA
+set.seed(123)
+rnorm(1000) %>% mean()
+
+```
+
+3. Clint Conley has 50 boats, but we will be modeling earnings per boat.  (It would be simple enough to multiply your per boat results by 50 to get earnings for the fleet.)
+
+## Questions
+
+Lightly comment your code and use pipes for readability.
+
+Use this code chunk to simulate demand, quantity and price, and then compute earnings. Make sure to use set.seed(123) before running any random process to ensure that your results are reproducible!
+
+```{r}
+# Set seed to 123 to have consisten results with the rest of my class and TA
+set.seed(123)
+
+  catch <- 3500 # Set Catch Demand to 3500 per boat
+
+  # Assiged Base data to simulated data a new dataset
+  sim_frame <- data %>%
+
+    # Update dataset with the simulated data
+    mutate( 
+            # The demand is simulated by using the sample() fucntion
+            demand = sample(
+                            x = c(0, 1000, 2000, 3000, 4000, 5000, 6000),
+                            size = n,
+                            replace = T,
+                            prob = c(.02, .03, .05, .08, .33, .39, .2)
+                          ),
+            # Price is simulated by the rnorm() function
+            price = rnorm(
+                          n = n,
+                          mean = (3.65),
+                          sd = (.2)
+                        ),
+            # Quantity is set to catch when demand is greater than catch, otherwise we set it equal to demand
+            quantity = ifelse(demand > catch, catch, demand),
+            # Earnings is calculated by multiplying the price by the quantity minus the cost to run the boat
+            earnings = quantity * price - cost
+      )
+# Display Simulated Data  
+head(sim_frame)
+```
+
+
+### Q1
+
+Plot simulated earnings.
+
+```{r}
+ggplot(sim_frame, aes(earnings))+
+  geom_vline(xintercept = (1375), col = 2)+
+  geom_vline(xintercept = 0, col = 2, lty=2)+
+  geom_density()+
+  theme_minimal()
+```
+
+>Response:
+Here we can see in the plot the distribution of the data Earnings vs Density.  The two lines, simply add a visual indicator of breaking even (dotted red line) and where we will become profitable (solid red line)
+
+
+### Q2
+
+What is P(F > 1375)?
+
+```{r}
+# the revenue of $3.25 per pound times the number of pounds of codfish minus the daily operating expenses of $10,000 to run the boat daily.
+F <- sim_frame$earnings # All earnings are assigned to variable F (daily Earnings per day)
+
+mean(F > 1375) # Daily Percentage earnings above $1375
+mean(F < 1375) # Daily Percentage earnings bellow $1375
+mean(F >= -10000) # Daily Percentage earnings above $-10,001 (to include all shoulod be 100%)
+mean(F) # Average earnings per day
+```
+
+>Response:
+The Daily Percentage earnings above $1375 is  83.9% (0.839). The company will be profitable about 84% of time.
+
+
+### Q3
+
+What is P(F < 0)
+
+```{r}
+mean(F < 0) # Daily Percentage earnings below $0 (losses).
+```
+
+>Response:
+The Daily Percentage earnings below $0 (losses) is 8.9% (0.089). The comapny will loose money about 9% of the time.
+
+
+
+### Q4
+
+What is the expected value (mean) of F?
+
+```{r}
+mean(F)
+```
+
+>Response:
+The average earnings per day is $1968.515
+
+
+
+### Q5
+
+What is your advice to Clint Conley?  Write one paragraph in which you argue a position. In your answer please incorporate the quantitative details from your simulation, and consider in particular the trade-off between risk and reward.
+
+>Response:<br>
+Clint Conley should Choose the Port of RockPort to run his business.<br><br>
+Making yearly calculations we can observe the following:<br>
+- Every weekday a boat goes fishing (5 days a week)<br>
+- Each Year has 52 weeks<br>
+- A Fleet of 50 Boats goes fishing daily <br>
+- A total of 13,000 "daily catches" selling oportunities to either port <br>
+(calculated as followed 5 x 52 x 50 = 13000)<br>
+- Port of Gloucester has an average daily profit of $1,375<br>
+( calculated as: 3.25 * 3500 - 10000 = 1375 daily profit per boat)<br>
+- Port of Rockport has an average daily profit of $1,968.515 with a probability to be better than Gloucester of 83.9%<br><br>
+Using the above information, we can predictthe following for any given year:<br>
+If Conoley sells to the port of Gloucester, he will make a profit of <b>$17,875,000</b><br>
+(13000 x 1375 = 17875000) <br>
+If Conoley sells to the port of Rockport, he will make a profit between the range between <b>$21,470,593.105 to $25,590,695</b><br> 
+[ ( (13000 x 1968.515) - (13000 x 1968.515 x (1 - 0.839) ) = 21470593.105]  to  [(13000 x 1968.515) = 25590695] <br><br>
+We can clearly observe that at its worst case scenario, selling to the port of Rockport will make a higer profit of at least $3,595,593.105 more than selling to the port of Gloucester. And on the best case scenafrio it can make up to $7,715,695 more than selling to the port of Gloucester. 
