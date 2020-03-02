@@ -43,7 +43,7 @@ d %>% #Use the entire dataset
     mean = mean(delay),
     median = median(delay),
     perc_90 = quantile(delay, probs = c(.9)),
-    standard_deviation = sd(d$delay, na.rm = TRUE)
+    standard_deviation = sd(delay)
   )
 # Show the default quartiles information (0%, 25%, 50%, 75%, 100%)
   quantile(d$delay)
