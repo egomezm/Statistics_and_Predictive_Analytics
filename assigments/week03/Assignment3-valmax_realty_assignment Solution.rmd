@@ -1,0 +1,158 @@
+---
+title: "Valmax Real State"
+author: "Eduardo Gomez "
+date: "02-29-2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) 
+library(janitor)
+```
+
+## Load data
+
+The dataset for this case is valmax.csv.
+
+```{r}
+# Load data
+valmax <- read_csv("valmax.csv")
+
+# Inspect data
+head(valmax)
+glimpse(valmax)
+
+```
+
+It is a pain to work with column names like these.  I would recommend changing the column titles to snake case using the `clean_names()` function in the janitor package.  Additionally, create a difference variable by subtracting the selling price from the asking price.
+
+```{r}
+valmax_Clean <- clean_names(valmax) # change colunm names to snake case
+
+valmax_Clean <- valmax_Clean %>%
+ mutate(price_difference = (asking_price - selling_price))
+print(valmax_Clean)
+# View(valmax_Clean)
+```
+
+## Goal
+
+As indicated in the case description, your goal is to figure out whether the data supports the claim that VALMAX clients have been selling homes for too little and buying homes for too much, compared to the clients of other brokers. 
+
+In most cases the selling price is below the asking price.  If VALMAX clients ask too little, then there is likely to be a smaller difference asking and selling, compared to other brokers.  If VALMAX clients are willing to pay more, then there is also likely to be a smaller difference between asking and selling, compared to other brokers.  So, here is another way to put the question posed in the case description:  is the *difference* between asking and selling (asking minus selling) lower for VALMAX than for the other brokers?
+
+## Questions
+
+Lightly comment your code and use pipes for readability.
+
+Make sure to use set.seed(123) before running any random process to ensure that your results are reproducible.
+
+Comment briefly on each of the questions, as directed.  Only the the final question requires a lengthier response.
+
+
+### Q1
+
+Plot the difference between asking vs selling price by broker. Does there appear to be a difference?
+
+```{r}
+# Graph a Histogram
+ggplot(valmax_Clean, aes(price_difference, col = broker))+
+  geom_histogram()+
+  facet_wrap(~broker)+
+labs(x="Broker", y="Price Diference", title="Histogram Plot for Price Diference")
+
+# Graph a Density Plot
+ggplot(valmax_Clean, aes(price_difference, col = broker))+
+  geom_density()+
+labs(x="Broker", y="Price Diference", title="Density Plot for Price Diference")
+
+# Graph a BoxPlot
+ggplot(valmax_Clean, aes(broker,price_difference))+
+  geom_boxplot()+
+labs(x="Broker", y="Price Diference", title="Boxplot for Price Diference")
+```
+
+>
+Response:<br>
+We can observe that "other" brokers have a slightly higher price difference at first glance as shown in the Histogram. <br>
+From the Density Plot, we can observe that the data of "other" brokers are slightly shifted to the right suggesting a higher price difference. while at "Valmax" is slightly skewed to the Left suggesting a lower price difference.<br>
+Lastly, we can observe in the BoxPlot, that the mean in other brokers is greater than the mean of Valmax, so if we compared the means from others against Valmax we can clearly see a higher average price difference on other brokers than Valmax.
+
+
+### Q2
+
+Calculate and interpret 95% CIs for mean difference by broker. 
+
+```{r}
+# Sumarize the Data and calculate the lower Confidence Interval, and the Upper Confidence interval
+valmax_Clean %>%  
+  group_by(broker) %>% 
+  summarize(n=n(),
+            mean = mean(price_difference),
+            sd = sd(price_difference),
+            SE = sd/sqrt(n),
+            lowerCI = mean - 1.96 * SE,
+            upperCI = mean + 1.96 * SE)
+```
+
+>
+Response<br>
+We calculated the mean, sd, SE, lowerCI, and upperCI for each broker.<br>
+We estimate the population mean, by using a sample mean, plus or minus a margin of error. The result is called a confidence interval for the population mean. <br>
+The Confidence Interval (CI) is a level of confidence that our data is statistically significant.<br>
+
+### Q3
+
+Compute a t-statistic for mean difference by broker. The formula is: 
+$$
+t = \frac{\bar{x_1}-\bar{x_2}}{\sqrt{\frac{s_1{^2}}{n_1}+\frac{s_2{^2}}{{n_2}}}}
+$$
+
+```{r}
+tstat <- function(mean1, mean2, var1, var2, n1, n2){
+  (mean1 - mean2) / sqrt(var1/n1 + var2/n2)
+}
+
+tstat(5028.571, 9681.818, 9960.173^2, 9985.507^2,35,44)
+
+```
+
+>
+Response:<br>
+The tstatistics for the mean price difference grouped by broker is -2.060376. The negative sign indicates a difference towards the left side of our distribution. A distance of -2.06 standard deviations away from the population sample mean. In other words, less price difference or fewer profits.
+
+
+
+### Q4
+
+What is the p-value associated with the t-statistic you have computed? Use a 2-tailed test by doubling the p-value obtained with the `pt()` function. (Use the built in t.test function to check your work. Your results should be very close.)
+
+```{r}
+
+# Calculate p-value associated with the t-statistic pt()
+pt(-2.060376, df = 35 + 44 -2)*2
+
+# Use the built in t.test function to check results, should be very close if doen correctly.
+t.test(x = filter(valmax_Clean, broker=="valmax")$price_difference,
+       y = filter(valmax_Clean, broker=="others")$price_difference,
+       alternative = "two.sided")
+```
+
+>Response:<br>
+We can observe that my pt() results of 0.04274058 are very close to the p-value = 0.04292 done in the Two-Sample t.test()
+
+### Q5
+
+Are the clients' complaints justified? Write a paragraph in which you weigh the evidence and argue a position. 
+
+>Response:<br>
+After a careful analysis to the data provided, *we can confirm that the data supports the claim that VALMAX clients have been selling homes for too little and buying homes for too much.*<br>
+The tstatistics value for the mean difference by broker is -2.060376 as shown in question 3. The negative sign indicates a difference towards the left side of our distribution. A distance of -2.06 standard deviations away from the sample mean. In other words, less price difference or fewer profits. But, is this value a random sampling result, or is a statistically significant resemblance of our population?. To answer this question, we will set up our Hypothesis and use our p-value to determine if our hypothesis is statistically significant or not.
+To simplify the analysis this can be interpreted as the following question "is the *Price Difference* (asking minus selling) lower for VALMAX than for the other brokers?"<br><br>
+Base on that question, we can formulate our testing Hypothesis: Null Hypothesis (H<sub>0</sub>) vs Alternative Hypothesis (H<sub>1</sub>) in reference to a Price Difference as calculated in Question 2<br>
+H<sub>0</sub>: &mu; = 0 Price Difference (is the same)<br>
+H<sub>1</sub>: &mu; &ne; 0 Price Difference (is different so it must be significant)<br><br>
+On question 4 We found That our alternative hypothesis is true because the difference in means is not equal to 0. Showing evidence of a significant difference between population means between Valmax and Other real state companies using the (2-sample t).<br><br>
+The p-value of 4.28% (0.04274058 as answered in question 4) evaluates how well the sample data support the Alternative Hypothesis. A small p-value (typically ≤ 0.05) indicates strong evidence against the null hypothesis, so we rejected the null hypothesis. A large p-value (> 0.05) indicates weak evidence against the null hypothesis. So, we have strong evidence against or Null Hypothesis.<br><br>
+In conclusion, the clients are justified in their complaints (supported by the Alternative Hypothesis) in which VALMAX clients have been selling homes for too little and buying homes for too much, compared to the clients of other brokers.<br>

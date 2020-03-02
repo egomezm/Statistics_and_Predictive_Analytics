@@ -1,0 +1,92 @@
+---
+title: " "
+author: " "
+date: " "
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) 
+
+```
+
+Note:  
+
+- Change the information in the yaml header above:  title, author, date.
+- Make sure output is html_document.
+- Once you are finished coding, run each chunk individually to make sure there are no errors.  (If necessary fix your code.) Once your code is error-free, click "knit" on the menu above. Your document should compile to HTML, provided that you have output set to "html_document."
+- In the code chunk above ("setup") echo is set to TRUE.  This means that the code in your chunks will be displayed, along with the results, in your compiled document.
+- Please delete these and other directions before compiling and submitting your assignment.
+
+## Load data
+
+The dataset for this case is valmax.csv.
+
+```{r}
+# Load data
+valmax <- read_csv("valmax.csv")
+
+# Inspect data
+head(valmax)
+glimpse(valmax)
+
+```
+
+It is a pain to work with column names like these.  I would recommend changing the column titles to snake case using the `clean_names()` function in the janitor package.  Additionally, create a difference variable by subtracting the selling price from the asking price.
+
+```{r}
+
+```
+
+## Goal
+
+As indicated in the case description, your goal is to figure out whether the data supports the claim that VALMAX clients have been selling homes for too little and buying homes for too much, compared to the clients of other brokers. 
+
+In most cases the selling price is below the asking price.  If VALMAX clients ask too little, then there is likely to be a smaller difference asking and selling, compared to other brokers.  If VALMAX clients are willing to pay more, then there is also likely to be a smaller difference between asking and selling, compared to other brokers.  So, here is another way to put the question posed in the case description:  is the *difference* between asking and selling (asking minus selling) lower for VALMAX than for the other brokers?
+
+## Questions
+
+Lightly comment your code and use pipes for readability.
+
+Make sure to use set.seed(123) before running any random process to ensure that your results are reproducible.
+
+Comment briefly on each of the questions, as directed.  Only the the final question requires a lengthier response.
+
+
+### Q1
+
+Plot the difference between asking vs selling price by broker. Does there appear to be a difference?
+
+```{r}
+
+```
+
+### Q2
+
+Calculate and interpret 95% CIs for mean difference by broker. 
+
+```{r}
+
+```
+
+### Q3
+
+Compute a t-statistic for mean difference by broker. 
+
+```{r}
+
+
+```
+
+### Q4
+
+What is the p-value associated with the t-statistic you have computed? Use a 2-tailed test by doubling the p-value obtained with the `pt()` function. (Use the built in t.test function to check your work. Your results should be very close.)
+
+```{r}
+
+```
+
+### Q5
+
+Are the clients' complaints justified? Write a paragraph in which you weigh the evidence and argue a position. 
