@@ -1,0 +1,406 @@
+---
+title: "Class 2"
+author: "Bharadwaj Kadiyala"
+date: ""
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Flight Delay case
+
+Download data. This code assumes that the data is in my working directory. Also note that `read_csv()` (readr package) has different defaults than `read.csv()` (base R), so they will make different choices about data types.  I am using `read_csv()` in this tutorial.
+
+The flight delay case is complicated to read but really boils down to a single question:  are RegionEx flights slower (more delayed) than MDA, as alleged?  In the future, you might be confused when reading a case. Rely on the assignment questions to help disambiguate it, since even if the questions are not easy to answer they will direct your attention to the important aspects of the case.  The goal of each assignment is to guide you through an analysis that will set you up to write a sensible and compelling analysis/recommendation in question 5.
+
+### Download data
+```{r}
+d <- read_csv("flight_delay_clean.csv")
+# check to see variable definition and data types
+str(d)
+# are there any NA in the data?
+any(is.na(d))
+```
+- Make "Day of Week" and "Route Code" into factor variables. 
+```{r}
+d<- d %>% mutate(`day_of_week` = factor(`day_of_week`),
+                 `route_code` = factor(`route_code`))
+summary(d)
+```
+
+### Q1. 
+Compute the mean, median, 90th percentile, and standard deviation of arrival delay minutes for RegionEx flights. Do the same for MDA flights. How do the two airlines compare?
+```{r}
+d %>% 
+  group_by(airline) %>% 
+  summarise(mean= mean(delay),
+            median = median(delay),
+            sd  = sd(delay),
+            perc90 = quantile(delay, probs = c(.9)))
+```
+
+
+### Q2
+
+Inspect the distribution of RegionEx's arrival delays by constructing a histogram of the number of arrival delay minutes of RegionEx's flights. Do the same for MDA's flights. How do these two distributions compare? Hint:  use facet_wrap().
+
+
+```{r}
+
+d %>% 
+  ggplot(aes(delay)) +
+  geom_histogram()+
+  facet_wrap(~airline)
+
+d %>% 
+  ggplot(aes(delay, col = airline)) +
+  geom_density()
+```
+
+
+### Q3
+
+In the tables below, we see that although RegionEx has a higher percentage of delayed flights in the aggregate (percent_delay in table 2: 26.2 vs 25.8), when we look at each route individually, RegionEx does no worse than MDA on any route (percent_delay in table 1). Moreover, on routes between DFW and MSY, it experiences a lower fraction of delayed flights than MDA. How do you explain this puzzling result?
+
+```{r}
+# Create summary tables
+
+d %>% 
+  count(airline, route_code, delay_indicator) 
+
+d %>% 
+  count(airline, route_code, delay_indicator) %>% 
+  group_by(airline, route_code) %>% 
+  mutate(percent_delay = (n/sum(n)*100) %>% round(1))
+
+# Table 1:  by Airline and route
+ d %>% 
+  count(airline, route_code, delay_indicator) %>% 
+  group_by(airline, route_code) %>% 
+  mutate(percent_delay = (n/sum(n)*100) %>% round(1))%>% 
+  filter(delay_indicator==1) %>% 
+  arrange(route_code)
+
+# Table 2: by Airline.  
+d %>% 
+  count(airline, delay_indicator) %>% 
+  group_by(airline) %>% 
+  mutate(percent_delay = (n/sum(n)*100) %>% round(1)) %>% 
+  filter(delay_indicator==1) 
+
+```
+
+
+### Q4
+
+Compare the scheduled flight durations for the two airlines on each of their four routes. Compare the actual flight durations. What do you notice? If the two airlines had the same scheduled duration, what impact would this have on their delay records?
+
+```{r}
+
+d %>% 
+ # na.omit() %>% 
+  group_by(airline, route_code) %>% 
+  summarise(mean_sched = mean(scheduled_flight_length),
+            mean_actual = mean(actual_flight_length)) %>% 
+  arrange(route_code)
+
+d %>% 
+  count(airline, route_code, scheduled_flight_length) %>% 
+  ggplot(aes(route_code, scheduled_flight_length, fill = airline)) +
+  geom_col(position = "dodge")
+
+```
+
+
+### Q5
+
+Does the data support the claim that the on‐time performance of RegionEx is worse than that of MDA? Write a paragraph in which you argue a position.
+
+> Here is what we are looking for:
+
+> spell check!
+
+> 1. Take a clear position.
+> 2. Use specific quantitative evidence to argue your position (cite numbers!).
+> 3. Use details accurately from the preliminary analyses:  mean vs. median as a measure of central tendency; large outliers in RegionEx flight delays; the misleadingness of the overall percentage delay, and the need to evaluate differences on a per route basis; the difference in the length of scheduled flights that will produce a misleading delay indicator. Using all of these is not essential but using some of them to draw a conclusion in your analysis is.
+
+## Simulation from probability distributions
+```{r} 
+# Load packages
+library(dplyr)
+library(ggplot2)
+```
+Functions for generating random samples from discrete distributions (Bernoulli and Binomial). Arguments for `rbinom` are $n$, size, prob.  $n$ is the number of times you want to simulate the experiment, size is the number of trials in each experiment, and prob is the probability of success in each trail. Note that Bernoulli distribution can be simulated by simply setting `size`=1 in the `rbinom`.
+```{r}
+set.seed(123)
+?rbinom
+# Bernoulli
+rbinom(n = 10, size = 1, prob = .5)
+# Binomial
+rbinom(n = 1, size = 10, prob = .5)
+hist(rbinom(1000, 10, .5))
+```
+
+Functions for generating random samples from continuous distributions (Uniform and Normal). `runif` has three arguments: number of experiments to simulate, lower and upper bounds. `rnorm` has three arguments: number of experiments to simulate, mean and s.d. of the normal distribution.
+```{r}
+# Uniform
+runif(n = 10, min = 5, max = 10)
+hist(runif(n = 10000, min = 5, max = 10))
+# Guassian or normal
+
+sims <- 1000 # Define this as the top of the code rather than hard-coding
+
+set.seed(123)
+mean(rnorm(n = sims, mean = 0, sd = 1))
+mean(rnorm(n = sims, mean = 0, sd = 1))
+hist(rnorm(n = 10000, mean = 0, sd = 1))
+hist(runif(n = 100000, min = 0, max = 1))
+```
+
+To simulate from any an arbitrary discrete distribution, `sample` takes in arguments x, size, replace, and prob. `x` which is either a number or a set of values, specifies the possible values from which to sample from. `size` is the number of samples. `prob` specifies the probabilities with which to sample each possibility from the vector `x'. `replace` specifies if sampling is to be done with or without replacement. Without replacement, simulated values will never repeat.
+```{r}
+set.seed(123)
+groups <- c("A", "B", "C", "D", "E")
+probs <- c(.1, .1, .3, .4, .1)
+sum(probs)
+
+temp2 <- sample(x = groups, 10, replace = T, prob = probs)
+table(temp2)
+temp2%>% table %>% prop.table() %>%   round(2)
+#barplot(print(sample(1:2, size=10, prob=c(1,5), replace=TRUE)))
+
+#temp2 <- sample(1:2, size=10000, prob = c(1,4), replace=TRUE)
+#temp2%>%table %>% prop.table()
+#?prop.table
+#?sample
+
+# sample(x = groups, 1000, replace = T, prob = probs) %>% 
+#   table %>% 
+#   prop.table %>% 
+#   round(2)
+
+```
+
+## Calculate cumulative distribution function (CDF) 
+
+We can calculate the CDF for defined regions of the probability mass function (PMF) for discrete random variables or the probability density function (PDF) for continuous random variables.
+
+### Normal Distribution
+
+The CDF basically calculates the area under regions of  probability curve.  (The total area is 1.)
+```{r}
+set.seed(1106)
+df <- data.frame(x = rnorm(sims))
+
+ggplot(df, aes(x)) +
+    geom_density() +
+    geom_vline(xintercept = -1, col = 2) +
+    theme_minimal() +
+    labs(title ="Density curve for standard normal distribution",
+         x = "x",
+         y = "density")
+
+# To plot the empirical cumulative distribution
+ggplot(df, aes(x)) + geom_vline(xintercept = -1, col = 2) + stat_ecdf(geom = "step")
+```
+
+What is the CDF from negative infinity to -1? 
+```{r}
+
+tempx <- (df$x < -1)
+mean(tempx)
+view(tempx)
+view(df$x)
+```
+
+What is the CDF from negative infinity to -1 to 1? 
+```{r}
+mean(df$x < 1) - mean(df$x < -1)
+```
+
+The above calculations use simulation (an emperical distribution which will be approximate).  We can do the same calculations from the theoretical distribution.
+```{r}
+pnorm(q = 1, mean = 0 , sd = 1)- pnorm(q = -1, mean = 0 , sd = 1)
+```
+
+### Uniform Distribution
+```{r}
+set.seed(1106)
+df_uni <- data.frame(x = runif(100000))
+
+ggplot(df_uni, aes(x)) +
+    geom_density() +
+    theme_minimal() +
+    labs(title ="Density curve for standard uniform distribution",
+         x = "x",
+         y = "density")
+```
+
+## Using simulation to compute probabilities.
+### Oil company
+
+Oil company estimates the probabilities of finding oil at these three sites are .7, .85, and .8. What is the probability of finding oil at all three of the sites?
+P(oil) = P(A and B and C) = .7 x .85 x .8 = 0.476
+```{r}
+.7*.85*.8
+```
+
+What is the probability of not finding oil at any of the three sites?
+```{r}
+(1-.7)*(1-.85)*(1-.8)
+```
+
+Do the calculation using simulation.
+```{r}
+?rbinom
+
+nn <- 100000
+Site1 <- rbinom(nn, size = 1, prob = c(.7))
+Site2 <- rbinom(nn, size = 1, prob = c(.85))
+Site3 <- rbinom(nn, size = 1, prob = c(.8))
+site <- Site1+Site2+Site3
+site %>% table() %>% prop.table()
+
+```
+
+
+
+### Restaurant example
+Sanjay Thomas is considering opening a restaurant. He  feels he needs to make at least $5000 per month in order to maintain a reasonable lifestyle and pay off his school loans. He needs to estimate how much he is likely to make with the restaurant.  Revenue and some of the costs will fluctuate, so this is a task for simulation!
+
+Essentially simulation is a method for propagating the randomness in the input variables through to the outcome variable---profit.  It is fairly straightforward to define the input variables probabilistically---they are random variables---but the outcome, being the result of multiple sources of uncertainty, would be hard to estimate any other way.
+
+#### Estimates of costs and revenue
+Fixed costs for the restaurant:
+```{r}
+(fixed <- data.frame(category = c("Rent", "Leased Equipment", "Utilities", "Insurance", "Loan Repayment", "Advertising/Promotion","Miscellaneous"),
+           cost = c(3000, 275, 265, 155, 125, 100, 75)))
+sum(fixed$cost)
+```
+Range of meal prices based on historical markets.
+```{r}
+(market <- data.frame(market = c("very healthy","healthy","not so healthy","unhealthy"),
+                      meal_price = c(20,18.50, 16.50, 15),
+                      probability = c(.25, .35, .3, .1)))
+# average meal price
+sum(market$meal_price*market$probability)
+```
+Additionally Sanjay estimates that:
+- the restaurant would have seating capacity for 50. 
+- the number of meals sold per month would be normally distributed with $\mu$ = 3000 and $\sigma$ = 1000. 
+- food costs will likely be \$11 per meal. 
+
+He guesses that the number of kitchen staff---chef, wait staff, kitchen staff---would probably vary between 5 and 8 with monthly labor costs in the range of \$5000 to \$7000.  The actual cost could be any value in this range with equal probability.
+
+#### Questions
+- How much profit can Sanjay  expect to make from the restaurant per month?  
+- How much would monthly profit likely vary based on fluctuations in demand, economic strength and labor costs?  
+- What choice should he make?
+
+#### Simulation Steps
+1. Set up an empty dataset.
+2. Simulate values based on random variables.
+3. Analyze the simulation.
+
+**Set up an empty dataset**. 
+```{r}
+# Solution without using simulation
+sum(market$meal_price*market$probability)*3000 - 11*3000-6000-sum(fixed$cost)
+
+#Set up empty data frame
+n <- 100000
+sim_frame <- data.frame(months = 1:n,
+                     fixed_costs = 3995,
+                     meals_sold = NA,
+                     price_per_meal = NA,
+                     profit_per_meal = NA,
+                     labor_costs = NA,
+                     profit = NA)
+head(sim_frame)
+```
+
+
+**Simulate values based on random variables** and fill in calculated fields. 
+
+- Profit per meal will be price per meal minus $11. 
+- Profit will be a calculated field. Profit = meals sold x profit per meal - labor costs - fixed costs.
+- The other columns will contain simulated values. 
+
+
+```{r}
+# Fill in data frame with simulated values
+set.seed(123)
+sim <- sim_frame %>% 
+  mutate(meals_sold = rnorm(n = n, mean = 3000, sd = 1000),
+         price_per_meal = sample(x = c(20, 18.50, 16.50, 15),
+                                 size = n,
+                                 replace = T,
+                                 prob = c(.25, .35, .3, .1)),
+         profit_per_meal = price_per_meal - 11,
+         labor_costs = runif(n = n, min = 5000, max = 7000),
+         profit = meals_sold * profit_per_meal - labor_costs - fixed_costs)
+  head(sim)
+```
+
+**Analyze the simulation.**   
+
+```{r}
+# Visualize distribution of profit
+ggplot(sim, aes(profit)) +
+  geom_density() +
+  geom_vline(xintercept = 20000) +
+  #geom_vline(xintercept = 0, col = 2, lty = 2) +
+  theme_minimal()+
+  labs(title = "Distribution of profit")
+
+ggplot(sim, aes(profit)) + geom_vline(xintercept = 0) + stat_ecdf(geom = "step")
+
+```
+
+So what is the mean of simulated profit?  Let's examine other summary numbers at the same time.
+
+```{r}
+# Summarize profit
+sim$profit %>% 
+  summary
+```
+What is the probability that Sanjay's monthly profit would be below his threshold of $5000?
+
+```{r}
+# Estimate p(profit < 5000)
+(sim$profit < 5000) %>% 
+  mean
+```
+What is the probability that Sanjay's monthly profit would be below $0?
+```{r}
+# Estimate p(profit < 0)
+(sim$profit < 0) %>% 
+  mean
+```
+
+Should he open the restaurant? 
+
+## Review details of Conley Fisheries case
+
+Which port should Clint Conley use? Gloucester or Rockport?
+
+Gloucester:  $3.25 per pound, can sell everything
+Rockport: varying price---mean of $3.65, sd of .2---and varying quantity.
+
+```{r}
+data.frame(Demand = c(0, 1000, 2000, 3000, 4000, 5000, 6000),
+           Probability = c(.02, .03, .05, .08, .33, .29, .22)) 
+```
+
+The boat can hold 3500 lbs. Any fish not sold will be thrown away.
+
+Fixed cost:  $10,000.
+
+Earnings:  price x quantity sold - costs. We can define this exactly for Gloucester but not for Rockport.
+
+In the case of Rockport price and quantity are random variables with defined distributions!
+
+Question:  Earnings for Rockport is a random variable, F.  What is the distribution of F and how does it compare to Gloucester?

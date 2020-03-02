@@ -1,0 +1,369 @@
+---
+title: "Class 3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+Objectives:
+
+1. Review the last case: simulating earnings in the Conley Fisheries case.
+2. Review code and concepts for this module's case:  Valmax Realty.
+
+## Conley Fisheries
+
+Question:  will it be more profitable for Clint Conley to use Gloucester port where demand and price are fixed or Rockport where the price is higher but variable and demand is variable. Cost per boat is 10000.
+
+Expected value per boat per day at Gloucester is 3500 * 3.25 - 10000 = 1375.
+
+## Load packages, create empty data frame
+
+```{r}
+# Load packages
+library(tidyverse) 
+
+# Define n
+n <- 1000
+
+# Empty data frame for 1000 simulated days
+data <- data.frame(day = seq(1:n),
+                demand = NA, # demand in Rockport
+                quantity = NA, # quanity sold
+                price = NA, # price per pound
+                cost = 10000, # cost of daily operations
+                earnings = NA)
+
+head(data)
+
+```
+
+
+## Create simulation data frame
+
+Need the following simulations:
+
+- demand
+- quantity
+- price
+- earnings
+
+Note that simulate for 1 boat, which could be multiplied by 50 to obtain something like a return on strategy.
+
+### Demand
+
+Demand has the following PMF:
+
+```{r}
+data.frame(demand = c(0, 1000, 2000, 3000, 4000, 5000, 6000),
+           probability = c(.02, .03, .05, .08, .33, .29, .22))
+```
+
+Sum of probabilities add to 1.
+```{r}
+sum(c(.02, .03, .05, .08, .33, .29, .2))
+```
+
+### Quantity
+
+Quantity depends on demand, such that: if demand is > 3500 then quantity = 3500 (because that is what the boat holds), other quantity = demand.
+
+Use `pmin()` or `ifelse()` and there may be other possibilities. Using `ifelse()` is straightforward.
+
+### Price
+
+Price is estimated to be $\mu$ = 3.65 and $\sigma$ = .2.
+
+### Demand 
+
+The demand variable is what we are simulating as a combination of these other inputs:
+
+Demand = price * quantity - cost.
+
+The random fluctuation in these inputs will produce the desired fluctuation in earnings which will allow us to be realistic not just about average earnings but about the *entire distribution*.  This allows us to assess risk!
+
+
+```{r}
+set.seed(123)
+
+data <- data %>% 
+  mutate(demand = sample(x = c(0, 1000, 2000, 3000, 4000, 5000, 6000),
+                         prob  = c(.02, .03, .05, .08, .33, .29, .22),
+                         size = n,
+                         replace = T),
+         quantity = ifelse(demand > 3500, 3500, demand),
+         price = rnorm(n = n, mean = 3.65, sd =.2),
+         earnings = price * quantity - cost)
+
+head(data)
+```
+
+Order of random operations will produce different results! (That's unavoidable.) We graded the correctness of your code and not whether your results matched ours exactly.
+
+### Q1
+
+Plot simulated earnings. Density plot and histogram.
+
+```{r}
+
+ggplot(data, aes(earnings))+
+  geom_density()
+
+
+```
+
+### Q2
+
+What is P(F > 1375)? F is expected earnings.
+
+```{r}
+
+mean(data$earnings > 1375)
+
+```
+
+### Q3
+
+What is P(F < 0)
+
+```{r}
+mean(data$earnings < 0)
+
+
+```
+
+
+### Q4
+
+What is the expected value (mean) of F?
+
+```{r}
+mean(data$earnings)
+
+
+```
+
+
+### Q5
+
+What is your advice to Clint Conley?  Write one paragraph in which you argue a position.
+
+1. Make a recommendation.
+2. Cite specific quantitative results to make your case.
+3. Frame the results as a simulation, the virtue of which is to assess risk vs. reward.  So: should discuss risk.
+
+
+
+## Central Limit Theorem
+
+### For exponential distribution: Generate several 100 samples of varying sizes and look at the distribution of the sample mean. 
+```{r} 
+i <- 1
+smean <- matrix( ,nrow=991,ncol =100)
+for (ssize in 10:1000){
+for (val in  1:100){
+smean[i,val] <- mean(rexp(n=ssize,rate =2))
+}
+i <- i + 1
+}
+
+for (i in 950:960) {
+plot<-ggplot( ,aes(smean[i,])) + 
+  geom_density()
+
+print(plot)
+}
+```
+
+### For uniform distribution: Generate several 100 samples of varying sizes and look at the distribution of the sample mean. 
+```{r} 
+i <- 1
+smean <- matrix( ,nrow=991,ncol =100)
+for (ssize in 10:1000){
+for (val in  1:100){
+smean[i,val] <- mean(runif(n=ssize))
+}
+i <- i + 1
+}
+
+for (i in 950:960) {
+plot<-ggplot( ,aes(smean[i,])) + 
+  geom_histogram()
+print(plot)
+}
+```
+
+
+### For binomial distribution: Generate several 100 samples of varying sizes and look at the distribution of the sample mean. 
+```{r} 
+i <- 1
+smean <- matrix(,nrow=991,ncol =100)
+for (ssize in 10:1000){
+for (val in  1:100){
+smean[i,val] <- mean(rbinom(n=ssize,size = 10, prob = .2))
+}
+i <- i + 1
+}
+
+
+?rbinom
+for (i in 950:960) {
+plot<-ggplot(,aes(smean[i,])) + 
+  geom_histogram()
+print(plot)
+}
+```
+
+
+
+## Student t-distribution
+
+``` {r}
+x <- -10:.1:10
+y1<- data.frame(x1=rt(10000, 20))
+head(y1)
+
+y <- rt(10000,20)
+
+sqrt(var(y)/20)
+
+p <- ggplot( , aes(y)) + geom_density() 
+
+p + geom_vline(aes(xintercept= -sqrt(var(y)/20)), color="blue", linetype="dashed", size=1) + geom_vline(aes(xintercept=sqrt(var(y)/20)), color="blue", linetype="dashed", size=1) + 
+  geom_vline(aes(xintercept=-3*sqrt(var(y)/20)), color="red", linetype="dashed", size=1) + geom_vline(aes(xintercept=3*sqrt(var(y)/20)), color="red", linetype="dashed", size=1)
+
+
+
+?pt
+
+qt(.025,20)
+qt(.975,20)
+
+```
+
+
+
+## Example:  Bike ridership data 
+
+Question:  Is bike ridership in statistically (significantly) different in season 1 compared to the other seasons? 
+
+1. Get and inspect data
+
+```{r}
+library(tidyverse)
+library(janitor)
+
+day <- read.csv("day.csv")[, -1]
+
+summary(day)
+
+# cnt is the outcome variable.
+
+# create variable:  s1, which will be 1 if season 1, 0 otherwise
+
+day <- day %>% 
+  mutate(s1 = ifelse(season == 1, 1, 0),
+         s1 = factor(s1))
+
+
+```
+
+2. Plot ridership by s1.
+
+```{r}
+
+ggplot(day, aes(cnt, col = s1))+
+  geom_density()
+
+ggplot(day, aes(cnt))+
+  geom_histogram()+
+  facet_wrap(~s1)
+
+ggplot(day, aes(s1, cnt))+
+  geom_boxplot()
+
+```
+
+
+3. Calculate 95% CIs for each level of s1.
+
+```{r }
+# Calculate summary statistics
+
+day %>% 
+  group_by(s1) %>% 
+  summarize(n = n(),
+            mean = mean(cnt),
+            sd = sd(cnt),
+            SE = sd/sqrt(n),
+            lowerCI = mean - 1.96 * SE,
+            upperCI = mean + 1.96 * SE)
+
+qt(.025,549)
+
+```
+
+4. Calculate the t-statistic and the associated p-value.
+
+The formula is: 
+$$
+t = \frac{\bar{x_1}-\bar{x_2}}{\sqrt{\frac{s_1{^2}}{n_1}+\frac{s_2{^2}}{{n_2}}}}
+$$
+
+A two-sample t-test is needed because we are comparing two samples (not, as above, a sampling distribution and a single mean). We can use the summary table above to calculate an approximate t-statistic (approximate because our input numbers are rounded).
+
+```{r }
+# Define function to calculate t for a 2 sample test
+tstat <- function(mean1, mean2, var1, var2, n1, n2){
+  (mean1 - mean2) / sqrt(var1/n1 + var2/n2)
+}
+
+tstat(2604.133, 5129.693, 1399.942^2, 1662.906^2, 181, 550)
+
+```
+
+Compare this value of $t$ to a null distribution defined by $T(n_1 + n_2 - 2)$ using `pt()` and remembering to multiply the p-value by 2 to get a two-tailed test.
+
+```{r}
+# Calculate p-value for two-tailed test
+
+pt(-20.06, df = 181 + 550 -2) *2
+
+```
+
+5. Use `t.test()` function.
+
+
+Finally, we can double-check our work using the built in `t.test()` function. The results should be close.
+
+```{r}
+?t.test
+t.test(x = filter(day, s1 == 1)$cnt,
+       y = filter(day, s1 ==0)$cnt,
+       alternative = "two.sided")
+```
+
+5. Interpret
+
+Remember: a statistically significant result does not prove anything. It should be used as part of of a broader analysis that includes careful EDA.  NHST is a tool and should be used to aid---not replace---contextual data analytic thinking. 
+
+
+## Valmax Realty
+
+Question:  Are Valmax Realty clients being advised to sell for too little and buy for too much compared to other brokerages?  
+
+What you need to be able to do:
+
+1. Create a variable:  asking price - selling price.
+2. Plot two continuous distributions.
+3. Calculate and interpret 95% CIs for a difference.
+4. Compute a two-sample t-statistic by hand.
+5. Use the `t.test()` function to check your work.
+6. Use your quantitative results to answer the business question.
+
+Note that there is a detailed example of a two-sample t-test in the tutorial!
+
+
+
